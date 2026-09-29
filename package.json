@@ -1,0 +1,20 @@
+{
+    "name":  "scaffold-hbar-ats-dvp",
+    "private":  true,
+    "workspaces":  [
+                       "packages/nextjs",
+                       "packages/hardhat"
+                   ],
+    "engines":  {
+                    "node":  "\u003e=20.18.3"
+                },
+    "license":  "MIT",
+    "scripts":  {
+                    "lint":  "yarn workspaces run lint",
+                    "typecheck":  "yarn workspaces run typecheck",
+                    "hardhat:test":  "yarn workspace @scaffold-hbar-ats-dvp/hardhat test",
+                    "next:build":  "yarn workspace nextjs build",
+                    "next:dev":  "yarn workspace nextjs dev",
+                    "hardhat:compile":  "yarn workspace @scaffold-hbar-ats-dvp/hardhat compile"
+                }
+}

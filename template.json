@@ -1,0 +1,41 @@
+{
+  "name": "scaffold-hbar-ats-dvp",
+  "description": "Bilateral delivery-versus-payment: exchange a permissioned ATS asset for an HTS payment token in a single atomic settlement transaction.",
+  "create-scaffold-hbar": {
+    "capabilities": {
+      "frontend": ["nextjs-app"],
+      "solidityFramework": ["hardhat"],
+      "packageManager": ["yarn", "npm"]
+    },
+    "defaults": {
+      "frontend": "nextjs-app",
+      "solidityFramework": "hardhat",
+      "packageManager": "yarn"
+    },
+    "outro": {
+      "sections": [
+        {
+          "title": "Next steps",
+          "steps": [
+            {
+              "label": "Copy environment files and add your credentials",
+              "command": "cp packages/hardhat/.env.example packages/hardhat/.env && cp packages/nextjs/.env.example packages/nextjs/.env"
+            },
+            {
+              "label": "Run testnet setup (requires HBAR-funded accounts)",
+              "text": "See docs/testnet.md for the full numbered setup sequence (scripts 1–7)."
+            },
+            {
+              "label": "Start the Next.js frontend",
+              "command": "{run:next:dev}"
+            },
+            {
+              "url": "https://docs.hedera.com/hedera/open-source-solutions/asset-tokenization-studio-ats",
+              "text": "ATS documentation — required reading before deploying a production ATS token."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
