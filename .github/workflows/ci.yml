@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  ci:
+    name: Install, Lint, Type-check, Test, Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.18.3
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.3'
+          cache: 'yarn'
+
+      - name: Enable Corepack (Yarn)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Type-check
+        run: yarn typecheck
+
+      - name: Hardhat contract tests
+        run: yarn hardhat:test
+        env:
+          # No testnet credentials needed — tests use local Hardhat EVM
+          HARDHAT_NETWORK: hardhat
+
+      - name: Next.js production build
+        run: yarn next:build
+        env:
+          # No DVP address set → frontend boots in local mode (no testnet needed)
+          NEXT_PUBLIC_DVP_SETTLEMENT_ADDRESS: ''
+          NEXT_PUBLIC_ATS_TOKEN_ADDRESS: ''
+          NEXT_PUBLIC_PAYMENT_TOKEN_ADDRESS: ''

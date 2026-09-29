@@ -1,0 +1,20 @@
+schemaVersion: 2
+
+name: dvp-settlement
+description: >
+  Bilateral ATS-HTS delivery-versus-payment settlement on Hedera.
+  A seller exchanges a permissioned ATS asset token for an HTS payment token
+  in a single atomic on-chain transaction. Both transfers succeed or neither
+  does. The template demonstrates compliant permissioned-asset settlement
+  using the Hashgraph Asset Tokenization Studio and Hedera Token Service.
+
+baseline:
+  commands:
+    - name: install
+      command: yarn install
+    - name: typecheck
+      command: yarn typecheck
+    - name: build
+      command: yarn next:build
+    - name: test
+      command: yarn hardhat:test

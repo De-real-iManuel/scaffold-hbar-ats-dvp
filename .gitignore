@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.pnp.*
+
+# Environment files (never commit secrets)
+.env
+.env.local
+.env.*.local
+packages/hardhat/.env
+packages/nextjs/.env
+
+# Hardhat artifacts
+packages/hardhat/artifacts/
+packages/hardhat/cache/
+packages/hardhat/typechain-types/
+
+# Hardhat-deploy deployment files (generated, not secrets)
+# Keep deployments/ in version control for frontend ABI sync
+# packages/hardhat/deployments/
+
+# Setup state (contains testnet addresses, .gitignored)
+packages/hardhat/scripts/setup/setup-state.json
+
+# Next.js
+packages/nextjs/.next/
+packages/nextjs/out/
+
+# Build outputs
+dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Test coverage
+coverage/
