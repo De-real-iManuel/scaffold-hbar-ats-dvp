@@ -1,30 +1,30 @@
-﻿{
-    "name":  "scaffold-hbar-ats-dvp",
-    "private":  true,
-    "workspaces":  {
-                       "packages":  [
-                                        "packages/nextjs",
-                                        "packages/hardhat"
-                                    ],
-                       "nohoist":  [
-                                       "@scaffold-hbar-ats-dvp/hardhat/hardhat",
-                                       "@scaffold-hbar-ats-dvp/hardhat/hardhat/**",
-                                       "@scaffold-hbar-ats-dvp/hardhat/hardhat-deploy",
-                                       "@scaffold-hbar-ats-dvp/hardhat/hardhat-deploy/**",
-                                       "@scaffold-hbar-ats-dvp/hardhat/hardhat-deploy-ethers",
-                                       "@scaffold-hbar-ats-dvp/hardhat/hardhat-deploy-ethers/**"
-                                   ]
-                   },
-    "engines":  {
-                    "node":  "\u003e=20.19.0"
-                },
-    "license":  "MIT",
-    "scripts":  {
-                    "lint":  "yarn workspaces run lint",
-                    "typecheck":  "yarn workspaces run typecheck",
-                    "hardhat:test":  "yarn workspace @scaffold-hbar-ats-dvp/hardhat test",
-                    "next:build":  "yarn workspace nextjs build",
-                    "next:dev":  "yarn workspace nextjs dev",
-                    "hardhat:compile":  "yarn workspace @scaffold-hbar-ats-dvp/hardhat compile"
-                }
+{
+  "name": "scaffold-hbar-ats-dvp",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/nextjs",
+      "packages/hardhat"
+    ],
+    "nohoist": [
+      "@scaffold-hbar-ats-dvp/hardhat/hardhat",
+      "@scaffold-hbar-ats-dvp/hardhat/hardhat/**",
+      "@scaffold-hbar-ats-dvp/hardhat/hardhat-deploy",
+      "@scaffold-hbar-ats-dvp/hardhat/hardhat-deploy/**",
+      "@scaffold-hbar-ats-dvp/hardhat/hardhat-deploy-ethers",
+      "@scaffold-hbar-ats-dvp/hardhat/hardhat-deploy-ethers/**"
+    ]
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "license": "MIT",
+  "scripts": {
+    "lint": "yarn workspaces run lint",
+    "typecheck": "yarn workspaces run typecheck",
+    "hardhat:test": "yarn workspace @scaffold-hbar-ats-dvp/hardhat test",
+    "next:build": "yarn workspace nextjs build",
+    "next:dev": "yarn workspace nextjs dev",
+    "hardhat:compile": "yarn workspace @scaffold-hbar-ats-dvp/hardhat compile"
+  }
 }

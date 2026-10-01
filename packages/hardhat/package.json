@@ -1,48 +1,48 @@
-﻿{
-    "name":  "@scaffold-hbar-ats-dvp/hardhat",
-    "version":  "1.0.0",
-    "private":  true,
-    "scripts":  {
-                    "compile":  "hardhat compile",
-                    "test":  "hardhat test",
-                    "deploy":  "hardhat deploy",
-                    "lint":  "echo \u0027lint: ok\u0027",
-                    "typecheck":  "echo \u0027typecheck: ok\u0027",
-                    "account:generate":  "hardhat run scripts/generateAccount.ts",
-                    "hardhat:chain":  "HEDERA_FORKING=true hardhat node"
-                },
-    "dependencies":  {
-                         "@hashgraph/asset-tokenization-contracts":  "^7.0.0",
-                         "@hashgraph/asset-tokenization-sdk":  "^7.0.0",
-                         "@hashgraph/sdk":  "^2.50.0",
-                         "@nomicfoundation/hardhat-chai-matchers":  "^2.0.8",
-                         "@nomicfoundation/hardhat-ethers":  "^3.0.8",
-                         "@nomicfoundation/hardhat-network-helpers":  "^1.0.12",
-                         "@nomicfoundation/hardhat-verify":  "^2.0.12",
-                         "@openzeppelin/contracts":  "^5.1.0",
-                         "@typechain/ethers-v6":  "^0.5.1",
-                         "@typechain/hardhat":  "^9.1.0",
-                         "chai":  "^4.3.10",
-                         "dotenv":  "^16.4.5",
-                         "ethers":  "^6.13.4",
-                         "hardhat":  "^2.22.17",
-                         "hardhat-deploy":  "^0.14.1",
-                         "hardhat-deploy-ethers":  "^0.4.2",
-                         "hardhat-gas-reporter":  "^1.0.10",
-                         "solidity-coverage":  "^0.8.13",
-                         "typechain":  "^8.3.2",
-                         "typescript":  "^5.7.2"
-                     },
-    "devDependencies":  {
-                            "@types/chai":  "^4.3.11",
-                            "@types/mocha":  "^10.0.9",
-                            "@types/node":  "^20.17.9",
-                            "@typescript-eslint/eslint-plugin":  "^8.18.0",
-                            "@typescript-eslint/parser":  "^8.18.0",
-                            "eslint":  "^9.17.0",
-                            "ts-node":  "^10.9.2"
-                        },
-    "engines":  {
-                    "node":  "\u003e=20.19.0"
-                }
+{
+  "name": "@scaffold-hbar-ats-dvp/hardhat",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat deploy",
+    "lint": "echo lint-ok",
+    "typecheck": "echo typecheck-ok",
+    "account:generate": "hardhat run scripts/generateAccount.ts",
+    "hardhat:chain": "hardhat node"
+  },
+  "dependencies": {
+    "@hashgraph/asset-tokenization-contracts": "^7.0.0",
+    "@hashgraph/asset-tokenization-sdk": "^7.0.0",
+    "@hashgraph/sdk": "^2.50.0",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.12",
+    "@nomicfoundation/hardhat-verify": "^2.0.12",
+    "@openzeppelin/contracts": "^5.1.0",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
+    "chai": "^4.3.10",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.4",
+    "hardhat": "^2.22.17",
+    "hardhat-deploy": "^0.14.1",
+    "hardhat-deploy-ethers": "^0.4.2",
+    "hardhat-gas-reporter": "^1.0.10",
+    "solidity-coverage": "^0.8.13",
+    "typechain": "^8.3.2",
+    "typescript": "^5.7.2"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.9",
+    "@types/node": "^20.17.9",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^9.17.0",
+    "ts-node": "^10.9.2"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
 }
