@@ -12,6 +12,9 @@ node_modules/
 packages/hardhat/.env
 packages/nextjs/.env
 
+# Project Design
+.kiro*
+
 # Hardhat artifacts
 packages/hardhat/artifacts/
 packages/hardhat/cache/
@@ -46,3 +49,8 @@ yarn-error.log*
 
 # Test coverage
 coverage/
+
+# npm lock file (project uses yarn)
+package-lock.json
+
+node_modules_bak/

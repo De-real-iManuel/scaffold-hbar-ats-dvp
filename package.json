@@ -1,10 +1,20 @@
 {
     "name":  "scaffold-hbar-ats-dvp",
     "private":  true,
-    "workspaces":  [
-                       "packages/nextjs",
-                       "packages/hardhat"
-                   ],
+    "workspaces":  {
+                       "packages":  [
+                                        "packages/nextjs",
+                                        "packages/hardhat"
+                                    ],
+                       "nohoist":  [
+                                       "@scaffold-hbar-ats-dvp/hardhat/hardhat",
+                                       "@scaffold-hbar-ats-dvp/hardhat/hardhat/**",
+                                       "@scaffold-hbar-ats-dvp/hardhat/hardhat-deploy",
+                                       "@scaffold-hbar-ats-dvp/hardhat/hardhat-deploy/**",
+                                       "@scaffold-hbar-ats-dvp/hardhat/hardhat-deploy-ethers",
+                                       "@scaffold-hbar-ats-dvp/hardhat/hardhat-deploy-ethers/**"
+                                   ]
+                   },
     "engines":  {
                     "node":  "\u003e=20.18.3"
                 },
