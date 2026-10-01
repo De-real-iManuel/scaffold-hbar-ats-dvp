@@ -1,152 +1,174 @@
 # scaffold-hbar-ats-dvp
 
-A Scaffold-HBAR starter template demonstrating bilateral **delivery-versus-payment (DvP)** settlement on Hedera: a seller atomically exchanges a permissioned **ATS (Asset Tokenization Studio)** security token for an **HTS (Hedera Token Service)** payment token in a single on-chain transaction.
+> Atomic delivery-versus-payment for permissioned ATS security tokens on Hedera — the missing settlement primitive for compliant secondary markets.
 
-**Who should use this:** Developers adding permissioned-asset purchases to an existing application on Hedera.
-
----
-
-## Exact Supported Configuration
-
-This template supports one specific, documented token configuration:
-
-| Token | Type | Interface | Requirements |
-|---|---|---|---|
-| ATS asset | ERC-20-compatible smart contract | IERC20 via allowance | KYC enabled, no protected partitions, not paused |
-| Payment token | Native HTS fungible token | IERC20 via HTS precompile | No custom fees, no rebasing |
-
-**Unsupported:** ATS tokens with protected partitions, globally paused/frozen tokens, tokens with custom HTS fees, rebasing tokens.
-
-ATS tokens are ERC-20-compatible smart contracts on Hedera EVM. They are **not** the same as native HTS tokens — see [Why ATS and HTS](#why-ats-and-hts-are-essential) below.
+**Who this is for:** Developers adding permissioned-asset secondary-market settlement to an existing Hedera application.
 
 ---
 
-## Quick Start
+## What it solves
+
+Most token-transfer templates hand you a single `transferFrom`. That's fine for simple swaps, but secondary-market settlement for regulated securities requires more:
+
+- **Atomicity** — buyer pays if and only if seller delivers. No partial fills. No stuck funds.
+- **Permissioned assets** — KYC/eligibility is enforced by the ATS token itself at transfer time, not by an off-chain gate you have to maintain.
+- **No escrow** — tokens never sit in the settlement contract. One transaction, two transfers, done.
+
+`DvPSettlement` is that primitive: a non-upgradeable smart contract that atomically swaps an ATS security token for an HTS payment token in a single EVM transaction. If either leg fails for any reason (KYC revoked, paused token, insufficient balance, expired offer), the entire transaction reverts and neither party loses anything.
+
+---
+
+## Why you need both ATS and HTS
+
+| Token | Type | Role |
+|---|---|---|
+| ATS asset | ERC-20-compatible smart contract | Permissioned security token — KYC enforced at `transferFrom` |
+| Payment token | Native HTS fungible token | Settlement currency — atomic finality, fixed fees, no MEV |
+
+**ATS (Asset Tokenization Studio)** provides ERC-1400-compatible security tokens where `transferFrom` reverts if the buyer lacks eligibility. You get on-chain compliance without building a separate eligibility check.
+
+**HTS (Hedera Token Service)** provides native tokens with ~3-second finality, predictable sub-cent fees, and no miner-extractable value. This is what makes Hedera useful for settlement — not just token issuance.
+
+Combining them gives you the only pattern that is both compliant (ATS enforces KYC) and final (HTS settles in seconds).
+
+**Unsupported:** ATS tokens with protected partitions, globally paused/frozen tokens, HTS tokens with custom fees, rebasing tokens.
+
+---
+
+## Quick start (local mode — no credentials needed)
 
 ```bash
-# 1. Install dependencies (requires Node.js >= 20.18.3 and Yarn)
+# Requires Node.js >= 20.18.3 and Yarn
 corepack enable && corepack prepare yarn@stable --activate
 yarn install
 
-# 2. Run unit tests (local Hardhat EVM — no testnet credentials needed)
+# Run all 44 unit tests against a local Hardhat EVM
 yarn hardhat:test
 
-# Expected output:
+# Expected:
 #   DvPSettlement
-#     Constructor
-#       ✓ reverts when atsAsset is the zero address
-#       ✓ reverts when paymentToken is the zero address
-#       ...
-#     40+ passing tests
+#     Constructor ........ 4 passing
+#     createOffer ........ 8 passing
+#     cancelOffer ........ 5 passing
+#     acceptOffer ........ 19 passing
+#     Reentrancy ......... 1 passing
+#     False-Return Token . 2 passing
+#   44 passing (7s)
 
-# 3. Build the Next.js frontend (local mode — no env vars needed)
+# Build and start the Next.js frontend in local (mock) mode
 yarn next:build
-
-# Expected output: ✓ Compiled successfully
-
-# 4. Start the frontend in development mode
 yarn next:dev
 # Open http://localhost:3000
-# A yellow banner shows: ⚠ Local Mode — all data is mock/test data
+# Yellow banner: ⚠ Local Mode — all data is mock/test data
 ```
-
-For testnet deployment and a real DvP exchange, see [docs/testnet.md](docs/testnet.md).
 
 ---
 
-## Seller-to-Buyer DvP Walkthrough
+## Testnet setup (real settlement)
 
-This walkthrough describes one complete delivery-versus-payment cycle.
+See [docs/testnet.md](docs/testnet.md) for the full walkthrough. The short version:
 
-### Prerequisites
+1. Get three funded Hedera Testnet accounts from [portal.hedera.com](https://portal.hedera.com/register).
+2. Fill in `packages/hardhat/.env` (copy from `.env.example`).
+3. Run the seven setup scripts in order:
 
-- Both participants have Hedera Testnet accounts with HBAR.
-- An ATS token has been provisioned (script 2) and the buyer has KYC eligibility granted (script 4).
-- An HTS payment token has been provisioned (script 3) and both accounts are associated.
-- `DvPSettlement` is deployed (script 5).
-
-### Step 1 — Seller grants ATS allowance
-
-The seller approves `DvPSettlement` to transfer exactly `assetAmount` of their ATS tokens:
-
-```
-atsToken.approve(dvpAddress, assetAmount)    # seller signs
-```
-
-**Important:** This approval does not lock or reserve tokens. Multiple open offers from the same seller may conflict.
-
-### Step 2 — Seller creates an offer
-
-The seller calls `createOffer(buyer, assetAmount, paymentAmount, expiry)`. The contract records the offer on-chain and emits `OfferCreated(offerId, ...)`. The seller shares the `offerId` with the buyer.
-
-### Step 3 — Buyer reviews the offer
-
-The buyer looks up the offer by ID and sees: seller, asset amount, payment amount required, expiry, and current status. The frontend shows advisory preflight checks (payment balance, allowance, ATS eligibility).
-
-### Step 4 — Buyer grants payment allowance
-
-The buyer approves `DvPSettlement` to transfer exactly `paymentAmount` of the payment token:
-
-```
-paymentToken.approve(dvpAddress, paymentAmount)    # buyer signs
+```bash
+# From packages/hardhat — Windows
+node node_modules/hardhat/internal/cli/bootstrap.js run scripts/setup/1.validate.ts --network hederaTestnet
+node node_modules/hardhat/internal/cli/bootstrap.js run scripts/setup/2.provision-ats.ts --network hederaTestnet
+node node_modules/hardhat/internal/cli/bootstrap.js run scripts/setup/3.provision-payment-token.ts --network hederaTestnet
+node node_modules/hardhat/internal/cli/bootstrap.js run scripts/setup/4.prepare-participants.ts --network hederaTestnet
+node node_modules/hardhat/internal/cli/bootstrap.js run scripts/setup/5.deploy-settlement.ts --network hederaTestnet
+node node_modules/hardhat/internal/cli/bootstrap.js run scripts/setup/6.grant-allowances.ts --network hederaTestnet
+node node_modules/hardhat/internal/cli/bootstrap.js run scripts/setup/7.run-exchange.ts --network hederaTestnet
 ```
 
-### Step 5 — Buyer accepts the offer
+```bash
+# From packages/hardhat — Linux/Mac
+npx hardhat run scripts/setup/1.validate.ts --network hederaTestnet
+# ... repeat for scripts 2–7
+```
 
-The buyer calls `acceptOffer(offerId)`. The contract:
+Each script is idempotent — re-running skips completed steps.
 
+---
+
+## Seller → Buyer walkthrough
+
+**Prerequisites:** ATS token provisioned (script 2), buyer has KYC eligibility (script 4), HTS payment token provisioned (script 3), `DvPSettlement` deployed (script 5).
+
+**Step 1 — Seller grants ATS allowance**
+
+```solidity
+atsToken.approve(dvpAddress, assetAmount)   // seller signs
+```
+
+This records an allowance but does not lock or reserve tokens.
+
+**Step 2 — Seller creates an offer**
+
+```solidity
+dvp.createOffer(buyerAddress, assetAmount, paymentAmount, expiry)
+// emits OfferCreated(offerId, ...)
+```
+
+The seller shares the `offerId` with the buyer.
+
+**Step 3 — Buyer grants payment allowance**
+
+```solidity
+paymentToken.approve(dvpAddress, paymentAmount)   // buyer signs
+```
+
+**Step 4 — Buyer accepts the offer**
+
+```solidity
+dvp.acceptOffer(offerId)   // buyer signs
+```
+
+The contract atomically:
 1. Validates caller is the designated buyer, offer is Open, and not expired.
-2. Sets offer status to `Filled` (CEI pattern — before any external call).
+2. Sets status to `Filled` (CEI pattern — before any external call).
 3. Calls `paymentToken.transferFrom(buyer, seller, paymentAmount)` — requires `true`.
-4. Calls `atsAsset.transferFrom(seller, buyer, assetAmount)` — requires `true`. ATS token enforces KYC on buyer here.
+4. Calls `atsAsset.transferFrom(seller, buyer, assetAmount)` — ATS enforces KYC here, requires `true`.
 5. Emits `OfferSettled(offerId, seller, buyer, assetAmount, paymentAmount)`.
 
-If step 3 or 4 fails for any reason (KYC revoked, paused token, insufficient balance), the EVM reverts the entire transaction and neither party loses tokens.
+If either transfer fails, the entire transaction reverts. No tokens move.
 
-### Step 6 — Confirm settlement
+**Step 5 — Confirm on HashScan**
 
-Both participants can verify the `OfferSettled` event on [HashScan](https://hashscan.io/testnet). Token balances update atomically.
-
----
-
-## Why ATS and HTS Are Essential
-
-### ATS tokens — permissioned security token infrastructure
-
-The [Hashgraph Asset Tokenization Studio](https://docs.hedera.com/hedera/open-source-solutions/asset-tokenization-studio-ats) provides ERC-1400-compatible security tokens with:
-- **KYC/eligibility enforcement** at the smart contract level: `transferFrom` reverts if the buyer is not eligible.
-- **Compliance controls**: pause, freeze, transfer restrictions enforced on-chain.
-- **Regulatory compliance**: supports ERC-3643 (T-REX) partial compatibility.
-
-Without ATS, you would need to build eligibility enforcement yourself, creating legal and technical risk. The DvP settlement pattern only works for permissioned assets if the token itself enforces those permissions at the transfer level.
-
-### HTS payment tokens — native Hedera settlement asset
-
-The [Hedera Token Service](https://docs.hedera.com/hedera/sdks-and-apis/hedera-api/token-service) provides native fungible tokens with:
-- **Atomic finality**: HTS transfers finalize in ~3 seconds with guaranteed ordering.
-- **No miner extractable value**: Hedera's aBFT consensus eliminates front-running risk in settlement.
-- **Low fixed fees**: HTS transfers cost fractions of a cent, predictably.
-
-By combining ATS (for the permissioned asset) with HTS (for the payment token), this template achieves compliant, atomic settlement with Hedera's native infrastructure.
+Both participants verify the `OfferSettled` event on [HashScan](https://hashscan.io/testnet). Balances update atomically.
 
 ---
 
-## Testnet Evidence
+## Supported configuration
 
-> **Note:** Testnet evidence (contract addresses, transaction hashes, HashScan links) will be added after running the setup scripts with funded accounts. Run `yarn ts-node packages/hardhat/scripts/setup/7.run-exchange.ts` after completing setup.
+| Token | Type | Interface | Requirements |
+|---|---|---|---|
+| ATS asset | ERC-20-compatible smart contract | `IERC20` via allowance | KYC enabled, no protected partitions, not paused |
+| Payment token | Native HTS fungible token | `IERC20` via HTS precompile | No custom fees, no rebasing |
 
-Placeholder for testnet evidence:
-- DvPSettlement contract: `[to be filled]`
-- Successful settlement tx: `[to be filled]`
-- HashScan link: `[to be filled]`
+ATS tokens are smart contracts on Hedera EVM — not the same as native HTS tokens.
+
+---
+
+## Testnet evidence
+
+> To be filled after running the setup scripts with funded accounts.
+
+- DvPSettlement contract: `pending`
+- ATS token address: `pending`
+- HTS payment token: `pending`
+- Successful settlement tx: `pending`
+- HashScan link: `pending`
 
 ---
 
 ## Links
 
-- [Architecture](docs/architecture.md) — Mermaid diagram, trust boundaries, rollback behavior
-- [Testnet Setup](docs/testnet.md) — Reproducible setup commands and expected outputs
-- [Extending the Template](docs/extending.md) — Connect different token pairs, replace the UI
+- [Architecture](docs/architecture.md) — Mermaid sequence diagram, trust boundaries, rollback behavior
+- [Testnet setup](docs/testnet.md) — Exact commands and expected outputs for all 7 scripts
+- [Extending](docs/extending.md) — Connect different token pairs, replace the frontend
 - [AGENTS.md](AGENTS.md) — Commands and invariants for AI-assisted development
 - [ATS Documentation](https://docs.hedera.com/hedera/open-source-solutions/asset-tokenization-studio-ats)
 - [Scaffold-HBAR Docs](https://docs.hedera.com/solutions/tools/scaffold-hbar)
