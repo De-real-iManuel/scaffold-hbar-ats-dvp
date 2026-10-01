@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "compile": "hardhat compile",
-    "test": "hardhat test",
-    "deploy": "hardhat deploy",
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "deploy": "npx hardhat deploy",
     "lint": "echo lint-ok",
     "typecheck": "echo typecheck-ok",
     "account:generate": "hardhat run scripts/generateAccount.ts",
