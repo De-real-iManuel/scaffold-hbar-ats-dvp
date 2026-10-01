@@ -1,4 +1,4 @@
-{
+﻿{
     "name":  "scaffold-hbar-ats-dvp",
     "private":  true,
     "workspaces":  {
@@ -16,7 +16,7 @@
                                    ]
                    },
     "engines":  {
-                    "node":  "\u003e=20.18.3"
+                    "node":  "\u003e=20.19.0"
                 },
     "license":  "MIT",
     "scripts":  {
