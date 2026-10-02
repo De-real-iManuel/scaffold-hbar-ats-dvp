@@ -13,13 +13,14 @@ import "hardhat-deploy-ethers";
 
 import generateTsAbis from "./scripts/generateTsAbis";
 
-// Hedera JSON-RPC URL (testnet default)
 const hederaRpcUrl = process.env.HEDERA_RPC_URL ?? "https://testnet.hashio.io/api";
 
-// Deployer key — falls back to Hardhat default account if not set (local testing only)
 const deployerPrivateKey =
-  process.env.DEPLOYER_PRIVATE_KEY ??
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+  process.env.DEPLOYER_PRIVATE_KEY?.startsWith("0x")
+    ? process.env.DEPLOYER_PRIVATE_KEY
+    : process.env.DEPLOYER_PRIVATE_KEY
+    ? `0x${process.env.DEPLOYER_PRIVATE_KEY}`
+    : "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -27,54 +28,39 @@ const config: HardhatUserConfig = {
       {
         version: "0.8.28",
         settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
+          optimizer: { enabled: true, runs: 200 },
         },
       },
     ],
   },
   defaultNetwork: "hardhat",
-  namedAccounts: {
-    deployer: {
-      default: 0,
-    },
-  },
+  namedAccounts: { deployer: { default: 0 } },
   networks: {
     hardhat: {},
     hederaTestnet: {
       url: "https://testnet.hashio.io/api",
       accounts: [deployerPrivateKey],
       chainId: 296,
+      // Hedera requires minimum 870 Gwei gas price on testnet
+      gasPrice: 900_000_000_000,
     },
     hederaMainnet: {
       url: "https://mainnet.hashio.io/api",
       accounts: [],
       chainId: 295,
+      gasPrice: 900_000_000_000,
     },
   },
-  // Hedera supports Sourcify for contract verification (not Etherscan)
-  sourcify: {
-    enabled: true,
-  },
-  etherscan: {
-    enabled: false,
-    apiKey: {},
-  },
-  typechain: {
-    outDir: "typechain-types",
-    target: "ethers-v6",
-  },
+  sourcify: { enabled: true },
+  etherscan: { enabled: false, apiKey: {} },
+  typechain: { outDir: "typechain-types", target: "ethers-v6" },
 };
 
-// Extend the deploy task to also generate TypeScript ABIs after deployment
 task("deploy").setAction(async (args, hre, runSuper) => {
   await runSuper(args);
   await generateTsAbis(hre);
 });
 
-// Extend the verify task to show HashScan link after Sourcify verification
 task("verify").setAction(async (args, hre, runSuper) => {
   await runSuper(args);
   const address = args.address as string | undefined;
