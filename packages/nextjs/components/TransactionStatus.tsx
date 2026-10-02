@@ -1,84 +1,112 @@
 "use client";
 
 import { useWaitForTransactionReceipt } from "wagmi";
-
-const HASHSCAN_BASE = "https://hashscan.io/testnet/transaction/";
+import { hashScanTxUrl } from "~/lib/formatters";
 
 interface TransactionStatusProps {
   hash: `0x${string}` | undefined;
   isError: boolean;
   errorMessage?: string;
+  /** Optional label shown in the success state */
+  successLabel?: string;
 }
 
-export function TransactionStatus({ hash, isError, errorMessage }: TransactionStatusProps) {
+/**
+ * Tracks a submitted transaction and renders a status pill.
+ * Matches the dark Grok design — no bright colors, desaturated success/error tones.
+ */
+export function TransactionStatus({
+  hash,
+  isError,
+  errorMessage,
+  successLabel = "Transaction confirmed",
+}: TransactionStatusProps) {
   const { status, isLoading } = useWaitForTransactionReceipt({
     hash,
     query: { enabled: !!hash },
   });
 
-  // No hash and no error: render nothing
-  if (!hash && !isError) {
-    return null;
-  }
+  if (!hash && !isError) return null;
 
   const hashScanLink = hash ? (
     <a
-      href={`${HASHSCAN_BASE}${hash}`}
+      href={hashScanTxUrl(hash)}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-blue-600 underline text-sm break-all"
+      className="font-mono text-[11px] text-muted underline underline-offset-2 hover:text-fg transition-colors break-all"
     >
-      View on HashScan ↗
+      {hash.slice(0, 10)}…{hash.slice(-8)} ↗
     </a>
   ) : null;
 
-  // Error prop set (write failed before hash)
+  /* Error before hash */
   if (isError && !hash) {
     return (
-      <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm">
-        <p className="text-red-700 font-medium">❌ Transaction failed</p>
-        {errorMessage && <p className="text-red-600 mt-1">{errorMessage}</p>}
+      <div className="mt-3 rounded-md bg-danger/10 px-3 py-3 hairline text-sm">
+        <p className="text-danger font-medium">Transaction failed</p>
+        {errorMessage && (
+          <details className="mt-1">
+            <summary className="cursor-pointer text-[11px] text-subtle">
+              Details
+            </summary>
+            <p className="mt-1 font-mono text-[11px] text-muted break-all">
+              {errorMessage}
+            </p>
+          </details>
+        )}
       </div>
     );
   }
 
-  // Hash present — show status
   if (hash) {
     if (isLoading || status === "pending") {
       return (
-        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
-          <p className="text-blue-700 font-medium">
-            Transaction submitted — waiting for confirmation...
-          </p>
-          <div className="mt-1">{hashScanLink}</div>
+        <div className="mt-3 rounded-md bg-raised px-3 py-3 hairline text-sm">
+          <div className="flex items-center gap-2">
+            <span className="inline-block size-2 rounded-full bg-warn animate-pulse" />
+            <span className="text-muted">Waiting for confirmation…</span>
+          </div>
+          <div className="mt-1.5">{hashScanLink}</div>
         </div>
       );
     }
 
     if (status === "success") {
       return (
-        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded text-sm">
-          <p className="text-green-700 font-semibold">✅ Settlement confirmed!</p>
-          <div className="mt-1">{hashScanLink}</div>
+        <div className="mt-3 rounded-md bg-success/10 px-3 py-3 hairline text-sm">
+          <p className="text-success font-medium">{successLabel}</p>
+          <div className="mt-1.5">{hashScanLink}</div>
         </div>
       );
     }
 
     if (status === "error" || isError) {
       return (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm">
-          <p className="text-red-700 font-medium">❌ Transaction failed</p>
-          {errorMessage && <p className="text-red-600 mt-1">{errorMessage}</p>}
-          <div className="mt-1">{hashScanLink}</div>
+        <div className="mt-3 rounded-md bg-danger/10 px-3 py-3 hairline text-sm">
+          <p className="text-danger font-medium">Transaction failed</p>
+          {errorMessage && (
+            <details className="mt-1">
+              <summary className="cursor-pointer text-[11px] text-subtle">
+                Details
+              </summary>
+              <p className="mt-1 font-mono text-[11px] text-muted break-all">
+                {errorMessage}
+              </p>
+            </details>
+          )}
+          <div className="mt-1.5">{hashScanLink}</div>
         </div>
       );
     }
 
-    // Unknown/loading status with hash
+    /* hash present but status not yet known */
     return (
-      <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded text-sm">
-        <p className="text-gray-700 font-medium">⏳ Checking transaction status...</p>
-        <div className="mt-1">{hashScanLink}</div>
+      <div className="mt-3 rounded-md bg-raised px-3 py-3 hairline text-sm">
+        <div className="flex items-center gap-2">
+          <span className="inline-block size-2 rounded-full bg-muted animate-pulse" />
+          <span className="text-subtle">Checking transaction…</span>
+        </div>
+        <div className="mt-1.5">{hashScanLink}</div>
       </div>
     );
   }

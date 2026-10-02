@@ -2,7 +2,16 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  webpack: (config) => {
+  // Disable type-checking and linting during production builds —
+  // run `yarn typecheck` and `yarn lint` separately.
+  // This significantly reduces build memory usage.
+  typescript: { ignoreBuildErrors: false },
+  eslint: { ignoreDuringBuilds: true },
+  webpack: (config, { isServer }) => {
+    // Reduce chunk concurrency to keep peak memory lower
+    if (!isServer) {
+      config.parallelism = 1;
+    }
     // Polyfill Node.js modules for browser compatibility with wagmi/viem
     config.resolve.fallback = {
       ...config.resolve.fallback,

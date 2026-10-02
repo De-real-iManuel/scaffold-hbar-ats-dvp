@@ -1,3 +1,49 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ─── Design token utilities not expressible in tailwind.config ─── */
+@layer utilities {
+  .hairline {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+  .hairline-hover:hover {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.13);
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ─── Base resets ─── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: #0a0a0b;
+    color: #f4f4f5;
+    font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  /* Smooth scrollbar colour */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0a0a0b;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1a1a1e;
+    border-radius: 3px;
+  }
+}
