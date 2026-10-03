@@ -1,145 +1,238 @@
 # Architecture
 
-## Settlement flow
+## Settlement sequence
 
 ```mermaid
 sequenceDiagram
+    autonumber
     participant S as Seller
-    participant ATS as ATS Token (ERC-20 contract)
+    participant ATS as ATS Equity Token
     participant DVP as DvPSettlement
-    participant HTS as HTS Payment Token (via precompile)
+    participant HTS as HTS Payment Token
     participant B as Buyer
 
-    Note over S,B: Off-chain: agree on terms (amount, price, expiry)
+    Note over S,B: Off-chain agreement on terms
 
-    S->>ATS: approve(dvpAddress, assetAmount)
+    S->>ATS: approve(dvp, assetAmount)
     Note over ATS: Allowance recorded. No balance lock.
 
     S->>DVP: createOffer(buyer, assetAmount, paymentAmount, expiry)
-    DVP-->>S: emits OfferCreated(offerId)
+    DVP-->>S: emit OfferCreated(offerId)
+    S-->>B: share offerId
 
-    S-->>B: share offerId out-of-band
-
-    B->>HTS: approve(dvpAddress, paymentAmount)
-    Note over HTS: Allowance recorded.
+    B->>HTS: approve(dvp, paymentAmount)
 
     B->>DVP: acceptOffer(offerId)
-    DVP->>DVP: CHECKS — caller==buyer, status==Open, block.timestamp < expiry
-    DVP->>DVP: EFFECTS — status = Filled (CEI: before any external call)
 
-    DVP->>HTS: transferFrom(buyer, seller, paymentAmount)
-    HTS-->>DVP: true  [or revert → entire tx reverts]
+    rect rgb(15, 25, 48)
+        DVP->>DVP: CHECKS: caller==buyer, status==Open, not expired
+        DVP->>DVP: EFFECTS: status = Filled (CEI - before any external call)
+        DVP->>HTS: transferFrom(buyer, seller, paymentAmount)
+        HTS-->>DVP: true
+        DVP->>ATS: transferFrom(seller, buyer, assetAmount)
+        Note over ATS: KYC / eligibility enforced internally by ATS token
+        ATS-->>DVP: true
+    end
 
-    DVP->>ATS: transferFrom(seller, buyer, assetAmount)
-    Note over ATS: ATS token enforces KYC on buyer (to address) internally
-    ATS-->>DVP: true  [or revert if KYC revoked / paused → entire tx reverts]
-
-    DVP-->>B: emits OfferSettled(offerId, seller, buyer, assetAmount, paymentAmount)
+    DVP-->>B: emit OfferSettled(offerId, seller, buyer, amounts)
     Note over S,B: Both legs committed atomically in one EVM transaction
 ```
 
-If either `transferFrom` reverts or returns `false`, the EVM reverts the entire transaction. The `require()` guards on both return values catch tokens that signal failure by returning `false` rather than reverting. The status write to `Filled` is also rolled back — the offer remains `Open`.
+> If either `transferFrom` fails, the EVM reverts the **entire** transaction. Both legs roll back, the offer stays `Open`, no tokens move.
+
+---
+
+## System layers
+
+```mermaid
+graph TD
+    W["Wallet\nMetaMask / WalletConnect"]
+
+    subgraph FE["packages/nextjs — Next.js 15"]
+        UI["React UI / App Router"]
+        H1["useDvPSettlement\ncreateOffer / acceptOffer / cancelOffer"]
+        H2["useTokenBalances\nATS + HTS balances"]
+        H3["useOfferPreflights\nadvisory buyer checks"]
+        H4["useOraclePrice\nPyth HBAR/USD feed"]
+    end
+
+    subgraph EXT["External"]
+        PY["Pyth Hermes REST API\nhermes.pyth.network"]
+    end
+
+    subgraph EVM["Hedera EVM — chainId 296"]
+        DVP["DvPSettlement.sol\nnon-upgradeable, no admin key"]
+        ATS["ATS Equity Token\nERC-1400 / IERC20\nKYC enforced in transferFrom"]
+        PRE["HTS Precompile\n0x0000...0167"]
+    end
+
+    subgraph NAT["Hedera Native Services"]
+        HTS["HTS Payment Token\nnative fungible token"]
+        HCS["HCS Topic\nappend-only settlement audit"]
+    end
+
+    subgraph OBS["Off-chain Observer"]
+        AUDIT["hcs-audit.ts\npolls OfferSettled events"]
+    end
+
+    W --> UI
+    UI --> H1 & H2 & H3 & H4
+    H4 --> PY
+    H1 --> DVP
+    H2 --> ATS & PRE
+    DVP --> ATS & PRE
+    PRE --> HTS
+    AUDIT --> DVP
+    AUDIT --> HCS
+```
+
+---
+
+## Offer state machine
+
+```mermaid
+stateDiagram-v2
+    direction LR
+
+    [*] --> Open : createOffer()
+
+    Open --> Filled : acceptOffer()\nboth transfers succeed
+    Open --> Cancelled : cancelOffer()\nseller only
+
+    Filled --> [*]
+    Cancelled --> [*]
+
+    note right of Open
+        Seller can cancel at any time.
+        Buyer can accept before expiry.
+        Failed acceptOffer leaves status Open.
+    end note
+
+    note right of Filled
+        Both legs committed.
+        Offer cannot be acted on again.
+    end note
+```
+
+---
+
+## CEI execution flow
+
+`acceptOffer` strictly follows Checks-Effects-Interactions:
+
+```mermaid
+flowchart TD
+    A["CHECKS\ncaller == buyer\nstatus == Open\nblock.timestamp < expiry"] --> B
+    B["EFFECTS\nstatus = Filled\nwritten BEFORE any external call"] --> C
+    C["INTERACTION 1\npaymentToken.transferFrom\nbuyer to seller"] --> D
+    D{payment ok?}
+    D -- true --> E
+    D -- false or revert --> R
+    E["INTERACTION 2\natsAsset.transferFrom\nseller to buyer\nATS enforces KYC"] --> F
+    F{asset ok?}
+    F -- true --> G
+    F -- false or revert --> R
+    G["emit OfferSettled\nBoth legs committed"]
+    R["EVM reverts entire tx\nstatus rolls back to Open\nno tokens move"]
+
+    style G fill:#1c3328,color:#8fad98
+    style R fill:#331c1c,color:#c48a8a
+```
 
 ---
 
 ## Trust boundaries
 
-| Boundary | Description |
+| Boundary | Model |
 |---|---|
-| Seller → DvPSettlement | Seller grants allowance and creates offers. The contract cannot pull more than the approved amount. |
-| Buyer → DvPSettlement | Buyer grants exact payment allowance. Only the designated buyer address can call `acceptOffer`. |
-| DvPSettlement → ATS Token | Contract calls `transferFrom` as approved spender. ATS token enforces KYC/eligibility internally. |
-| DvPSettlement → HTS Precompile | Contract calls `transferFrom` on the HTS precompile at `0x0000000000000000000000000000000000000167`. Standard ERC-20 call — no special trust. |
-| Seller ↔ Buyer | No direct interaction. The contract enforces atomicity and authorization between them. |
+| Seller → DvPSettlement | Grants allowance; contract cannot pull more than approved |
+| Buyer → DvPSettlement | Grants exact payment allowance; only designated buyer can `acceptOffer` |
+| DvPSettlement → ATS Token | Calls `transferFrom` as approved spender; ATS enforces KYC internally |
+| DvPSettlement → HTS Precompile | Standard IERC20 call at `0x0000000000000000000000000000000000000167` |
+| Seller ↔ Buyer | No direct interaction; the contract enforces atomicity between them |
 
 ---
 
 ## Allowance model
 
-Creating an offer does **not** reserve tokens. The seller's balance and allowance are verified at acceptance time by the token contracts themselves.
+Creating an offer does **not** reserve tokens. Balances and allowances are checked only at acceptance time by the token contracts.
 
-Consequences:
-- A seller can create multiple open offers for the same asset balance.
-- Only the first offer accepted will succeed; subsequent acceptances revert when the balance or allowance is depleted.
-- This is documented in NatSpec on `createOffer`.
-
----
-
-## ATS KYC enforcement
-
-When `DvPSettlement` calls `atsAsset.transferFrom(seller, buyer, assetAmount)`, the ATS token contract's own `transferFrom` logic checks whether the buyer (`to` address) has KYC/eligibility status. If eligibility was granted at offer creation but revoked before acceptance, the `transferFrom` call reverts and the entire settlement transaction reverts — no tokens move.
-
-The settlement contract does not implement any eligibility logic. Compliance rules live entirely in the asset token.
+A seller can create multiple open offers for the same balance. Only the first accepted will succeed — subsequent acceptances revert when the balance or allowance is depleted. This is documented in NatSpec on `createOffer`.
 
 ---
 
 ## Settlement rollback
 
-Rollback is handled entirely by EVM transaction semantics:
-
-| Scenario | What happens |
+| Failure condition | Result |
 |---|---|
-| Payment `transferFrom` reverts | Entire tx reverts. Offer status stays `Open`. No tokens move. |
-| Payment `transferFrom` returns `false` | `require(paymentOk)` fails. Entire tx reverts. No tokens move. |
-| Asset `transferFrom` reverts (after payment succeeded) | Entire tx reverts. Payment transfer is also rolled back. No tokens move. |
-| Asset `transferFrom` returns `false` | `require(assetOk)` fails. Entire tx reverts. Payment transfer rolled back. |
-
-The offer status is set to `Filled` before any transfer call (CEI pattern). If the transaction reverts, that write is also rolled back — the offer remains `Open` and can be retried or cancelled.
-
----
-
-## Unsupported configurations
-
-| Configuration | What happens |
-|---|---|
-| ATS token with protected partitions | `transferFrom` on default partition may fail or behave unexpectedly. `acceptOffer` reverts. No tokens move. |
-| ATS token globally paused | `transferFrom` reverts at the token level. `acceptOffer` reverts. No tokens move. |
-| HTS payment token with custom fees | Effective transfer amount differs from requested amount. Not supported — do not use. |
-| Rebasing payment token | Token balance changes post-transfer. Undefined behavior — not supported. |
+| Payment `transferFrom` reverts | Entire tx reverts. Status stays `Open`. No tokens move. |
+| Payment `transferFrom` returns `false` | `require(paymentOk)` fails. Same result. |
+| Asset `transferFrom` reverts (KYC, pause) | Entire tx reverts. Payment also rolled back. |
+| Asset `transferFrom` returns `false` | `require(assetOk)` fails. Payment rolled back. |
+| Reentrancy attempt | `ReentrancyGuard` reverts outer call immediately. |
 
 ---
 
-## HTS precompile address
+## Pyth oracle (advisory)
 
-The HTS precompile is at `0x0000000000000000000000000000000000000167` on both Hedera Testnet (chainId 296) and Hedera Mainnet (chainId 295). Native HTS fungible tokens are accessible at their derived EVM address: `0x` + zero-padded hex of the token number. For example, HTS token `0.0.10816685` has EVM address `0x0000000000000000000000000000000000a50cad`.
+```mermaid
+flowchart LR
+    PY["Pyth Hermes API\nhermes.pyth.network"] -->|GET price feed| H
+    H["useOraclePrice hook\nbigint-only arithmetic\n5s timeout, 60s staleness"] -->|suggestedAmount: bigint or null| F
+    F["CreateOfferForm\nadvisory display only\nform always submittable"] -->|seller sets paymentAmount| DVP
+    DVP["DvPSettlement\nenforces no pricing"]
 
-`DvPSettlement` calls `transferFrom` on this address identically to any ERC-20 contract. The precompile handles the native HTS transfer internally.
-
----
-
-## Pyth Network Oracle
-
-`hooks/useOraclePrice.ts` fetches the HBAR/USD price from Pyth's Hermes REST API and computes an advisory suggested payment amount for the seller when creating an offer.
-
-`
-Pyth Hermes API (https://hermes.pyth.network)
-      |  HTTPS GET /v2/updates/price/latest?ids[]=<feedId>
-      v
-useOraclePrice hook (Next.js client component)
-      |  computeSuggestedAmount(rawPrice, expo, assetAmount) -- bigint only
-      v
-CreateOfferForm -- advisory suggestion below payment amount field
-      |  seller can override -- form always submittable
-      v
-DvPSettlement.createOffer() -- enforces no pricing
-`
-
-The oracle is advisory-only and does not block settlement. Feed ID is configurable via `NEXT_PUBLIC_PYTH_FEED_ID`.
-## HCS Audit Trail
-
-An off-chain observer script (`scripts/hcs-audit.ts`) listens for `OfferSettled` events from the deployed `DvPSettlement` contract and submits a structured JSON message to a Hedera Consensus Service topic after each settlement.
-
-```
-DvPSettlement (EVM)
-      │  OfferSettled event
-      ▼
-hcs-audit.ts (off-chain)
-      │  TopicMessageSubmitTransaction
-      ▼
-HCS Topic (append-only, no admin key)
-      │  Ordered, timestamped, tamper-evident
-      ▼
-HashScan topic viewer
+    style PY fill:#1a1a2e
+    style DVP fill:#1a2e1a
 ```
 
-This composes two native Hedera services: an EVM smart contract for atomic settlement enforcement, and HCS for immutable settlement record-keeping. The contract does not need to be modified — the observer reads public events.
+---
+
+## HCS audit trail
+
+```mermaid
+flowchart LR
+    DVP["DvPSettlement\nemits OfferSettled"] -->|getLogs polling| A
+    A["hcs-audit.ts\noff-chain observer"] -->|TopicMessageSubmitTransaction| T
+    T["HCS Topic\nappend-only, no admin key\nordered and timestamped"] --> HS
+    HS["HashScan\ntopic viewer"]
+
+    style DVP fill:#1a2e1a
+    style T fill:#1a1a2e
+```
+
+HCS message format (all amounts as decimal strings, no scientific notation):
+
+```json
+{
+  "offerId": "1",
+  "seller": "0xa542becd4d0549812d392127175aa199a3bb9fe9",
+  "buyer": "0x75c925b0fe7ce447010725ccff65502a0d1c457d",
+  "assetAmount": "100000000000000000000",
+  "paymentAmount": "50000000",
+  "txHash": "0x317c3c17e80a392bbab7732e6eb8bc21aee0fb797307017c72bd6b249196e02b",
+  "timestamp": "2026-10-02T00:17:00.000Z"
+}
+```
+
+---
+
+## ATS Factory integration
+
+Script 2 calls `deployEquity()` directly on the live ATS Factory contract using ethers.js (no browser wallet required). This deploys a real ERC-1400 equity token with `internalKycActivated: true`.
+
+```mermaid
+flowchart TD
+    ENV["packages/hardhat/.env\nATS_ADMIN_PRIVATE_KEY\nATS_FACTORY_ADDRESS"] --> S2
+    S2["2.provision-ats.ts\nethers.js signer"] -->|deployEquity struct| FAC
+    FAC["ATS Factory Proxy\n0x5fA65CA30d1984701F10476664327f97c864A9D3"] -->|deploys| TOK
+    TOK["ATS Equity Token\ninternalKycActivated: true\nERC-1400 / IERC20"] --> KYC
+    KYC["grantKyc(seller)\ngrantKyc(buyer)"] --> ISS
+    ISS["issue(seller, 1_000_000)"] --> DONE
+    DONE["Setup state written\nATS_TOKEN_ADDRESS recorded"]
+
+    style FAC fill:#1a1a2e
+    style TOK fill:#1a2e1a
+```
+
+If the factory call reverts (e.g. admin account not registered), script 2 falls back to `MockATSToken` automatically and clearly labels it as a simulation.

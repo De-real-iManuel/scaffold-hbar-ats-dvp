@@ -460,9 +460,24 @@ export function OfferView({ offerId }: OfferViewProps) {
             )}
 
             {!isBuyer && !isSeller && (
-              <p className="text-sm text-subtle">
-                Connect as the buyer or seller to act on this offer.
-              </p>
+              <div className="space-y-2">
+                <p className="text-sm text-muted">
+                  Your wallet is not the buyer or seller on this offer.
+                </p>
+                <div className="rounded-md bg-raised p-3 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-subtle font-medium">Seller</span>
+                    <span className="font-mono text-muted">{seller ? shortenAddress(seller) : "—"}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-subtle font-medium">Buyer</span>
+                    <span className="font-mono text-muted">{buyer ? shortenAddress(buyer) : "—"}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-subtle">
+                  Switch to one of these wallets to approve, accept, or cancel.
+                </p>
+              </div>
             )}
 
             {actionError && (

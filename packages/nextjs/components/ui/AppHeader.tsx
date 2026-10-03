@@ -9,9 +9,9 @@ interface AppHeaderProps {
 }
 
 const NAV_LINKS = [
-  { href: "/",       label: "Desk" },
-  { href: "/create", label: "Create" },
-  { href: "/pattern",label: "Pattern" },
+  { href: "/",       label: "Dashboard" },
+  { href: "/create", label: "Create Offer" },
+  { href: "/pattern", label: "How It Works" },
 ];
 
 /**
