@@ -75,7 +75,7 @@ export default function PatternPage() {
               <code className="font-mono text-[11px] text-subtle">
                 transferFrom
               </code>{" "}
-              — the settlement contract doesn't need to be aware of it.
+              — the settlement contract doesn&apos;t need to be aware of it.
             </p>
             <p>
               Together: a payment rail that works everywhere, and an asset rail
@@ -107,7 +107,7 @@ export default function PatternPage() {
           Scaffold this project
         </p>
         <pre className="rounded-md bg-raised p-4 font-mono text-xs text-fg overflow-x-auto">
-          npx create-scaffold-hbar@latest my-dvp --template ats-dvp
+          npm create scaffold-hbar@latest -- --template De-real-iManuel/scaffold-hbar-ats-dvp
         </pre>
         <p className="mt-2 text-[11px] text-subtle">
           Creates a fully-configured DvP starter with contracts, setup scripts,
