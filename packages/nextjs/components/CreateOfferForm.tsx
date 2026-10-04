@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -55,7 +55,7 @@ export function CreateOfferForm() {
   const [errorMsg, setErrorMsg] = useState<string | undefined>();
 
   const feedId = process.env.NEXT_PUBLIC_PYTH_FEED_ID ??
-    "0xd2c5cef8b13e832a63ea0eed95aed2c7cff08a22a60a79bce07c5c4a0ed3dd85";
+    "0x3728e591097635310e6341af53db8b7ee42da9b3a8d918f9463ce9cca886dfbd";
   // Parse assetAmount for oracle (0n if empty/invalid)
   let assetBigInt = 0n;
   try { assetBigInt = assetAmountStr ? BigInt(assetAmountStr.split(".")[0]) * 10n**18n : 0n; } catch {}

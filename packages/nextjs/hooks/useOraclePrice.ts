@@ -13,7 +13,7 @@ export interface OraclePriceResult {
 
 const DEFAULT_FEED_ID =
   process.env.NEXT_PUBLIC_PYTH_FEED_ID ??
-  "0xd2c5cef8b13e832a63ea0eed95aed2c7cff08a22a60a79bce07c5c4a0ed3dd85";
+  "0x3728e591097635310e6341af53db8b7ee42da9b3a8d918f9463ce9cca886dfbd";
 
 async function fetchPythPrice(
   feedId: string

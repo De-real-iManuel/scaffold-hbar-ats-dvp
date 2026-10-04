@@ -378,7 +378,7 @@ See [docs/extending.md](docs/extending.md) to swap the token pair or replace the
 | `DvPSettlement` | [`0x20308700CcF4a22db4b05E8E4Cc4Ff7c72176D51`](https://hashscan.io/testnet/contract/0x20308700CcF4a22db4b05E8E4Cc4Ff7c72176D51) |
 | ATS demo token | [`0xEDdD1903D24E26A84E2AEeFf08909b9D024574E6`](https://hashscan.io/testnet/contract/0xEDdD1903D24E26A84E2AEeFf08909b9D024574E6) |
 | HTS payment token | [`0.0.10816685`](https://hashscan.io/testnet/token/0.0.10816685) |
-| Settlement tx | [`0x317c3c17...e02b`](https://hashscan.io/testnet/transaction/0x317c3c17e80a392bbab7732e6eb8bc21aee0fb797307017c72bd6b249196e02b) |
+| Settlement tx | [`0x317c3c17e80a392bbab7732e6eb8bc21aee0fb797307017c72bd6b249196e02b`](https://hashscan.io/testnet/transaction/0x317c3c17e80a392bbab7732e6eb8bc21aee0fb797307017c72bd6b249196e02b) |
 
 Verified: 100 DATS exchanged for 50 DVPPAY atomically. KYC revocation and wrong-buyer rejection both verified on-chain.
 
